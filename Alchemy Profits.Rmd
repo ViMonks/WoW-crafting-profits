@@ -7,12 +7,12 @@ runtime: shiny
 ---
 
 ```{r global, include=FALSE}
+# If you do not have the following packages, you will need to install them with install.packages("packageName")
 library( dplyr )
 library( tidyverse )
 library( pander )
 library( lubridate )
 library( janitor )
-library( ggvis )
 library( Hmisc )
 ```
 
