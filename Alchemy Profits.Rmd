@@ -1,0 +1,146 @@
+---
+title: "Alchemy Profits"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+runtime: shiny
+---
+
+```{r global, include=FALSE}
+library( dplyr )
+library( tidyverse )
+library( pander )
+library( lubridate )
+library( janitor )
+library( ggvis )
+library( Hmisc )
+```
+
+```{r setup, echo=F}
+raw.sales <- read_csv("C:/INSERT YOUR PATH/Accounting_REALM_sales.csv") # path to sales .csv file
+raw.expenses <- read_csv("C:/INSERT YOUR PATH/Accounting_REALM_purchases.csv") # path to purchases .csv file
+# Note on above: I refer to expenses, but TSM has a "purchases" export and an "expenses" export. You want the purchases export.
+
+# define list of craftables. Currently all alchemy crafts except transmutes.
+crafts <- Cs(i:12360,i:9061,i:5634,i:6370,i:13452,i:3387,i:13512,i:13510,i:2459,i:20008,i:9030,i:9210,i:13511,i:13444,i:13457,i:8956,i:118,i:9088,i:9149,i:3829,i:3824,i:13423,i:9172,i:7068,i:13454,i:20007,i:13442,i:858,i:3825,i:2454,i:2457,i:13446,i:6371,i:2455,i:6037,i:9264,i:3577,i:3382,i:13513,i:6662,i:929,i:13455,i:3389,i:20004,i:5631,i:9187,i:13459,i:19931,i:13506,i:3823,i:1710,i:21546,i:3388,i:17708,i:13458,i:13445,i:5996,i:13456,i:2458,i:13461,i:3386,i:18253,i:3827,i:6372,i:2456,i:5633,i:9179,i:13447,i:3385,i:9206,i:6049,i:3928,i:3383,i:12190,i:6052,i:5997,i:13443,i:20002,i:13462,i:3391,i:4596,i:9155,i:8949,i:6048,i:10592,i:3390,i:18294,i:9197,i:6149,i:9224,i:8951,i:6051,i:3826,i:6373,i:4623,i:9036,i:13453,i:9233,i:9154,i:3828,i:6050,i:3384,i:9144)
+
+# define list of crafting materials
+reagents <- Cs(i:9260,i:3164,i:3371,i:1288,i:2449,i:2447,i:6358,i:6370,i:6522,i:5635,i:2452,i:2450,i:3356,i:3369,i:3355,i:2453,i:3820,i:3372,i:4402,i:7070,i:6371,i:7067,i:7068,i:6359,i:3821,i:3824,i:3818,i:5637,i:3575,i:3357,i:3860,i:9262,i:8153,i:3858,i:10620,i:3819,i:3358,i:8925,i:8838,i:11176,i:7972,i:7077,i:10286,i:13422,i:8836,i:8831,i:4625,i:13463,i:13464,i:4342,i:8846,i:12359,i:13423,i:8839,i:8845,i:18256,i:12804,i:19943,i:12363,i:12938,i:13468,i:13467,i:13466,i:13465,i:8925,i:18256,i:3372,i:3371)
+
+# Sales
+sales <- raw.sales %>% mutate(date = as_date(as_datetime(time))) %>% # converts unix timestamp to date
+    filter( itemString %in% crafts ) %>% # filters alchemy crafts
+    mutate(gold = round(price/10000, 2)) %>% # converts price (which is in copper by default) to a new gold variable
+    select( itemString, itemName, stackSize, quantity, date, gold) # selects the useful columns: itemString, itemName, stackSize, quantity, date, gold
+    
+summary.sales <- sales %>%
+    group_by( itemName ) %>% 
+    dplyr::summarize( "Quantity Sold"=n(), "Minimum Sale Price"=min(gold), "Maximum Sale Price"=max(gold), "Average Sale Price"=mean(gold), "Total Sales Value"=sum(gold) ) %>% # summary stats for each item
+    adorn_totals("row", name = "Grand Total") # adds grand total row
+
+# Expenses (code structure equivalent to above for Sales)
+expenses <- raw.expenses %>% mutate(date = as_date(as_datetime(time))) %>% # converts unix timestamp to date
+    filter( itemString %in% reagents ) %>% # filters out all alchemy reagents
+    mutate(gold = round(price/10000, 2)) %>% # converts price variable to gold variable
+    select( itemString, itemName, stackSize, quantity, date, gold) # selects the useful columns: itemString, itemName, stackSize, quantity, date, gold
+
+summary.expenses <- expenses %>%
+    group_by( itemName ) %>%
+    dplyr::summarize( "Quantity Sold"=n(), "Minimum Sale Price"=min(gold), "Maximum Sale Price"=max(gold), "Average Sale Price"=mean(gold), "Total Sales Value"=sum(gold) ) %>% # summary stats for each item
+    adorn_totals("row", name = "Grand Total") # adds grand total row
+
+
+
+```
+
+```{r profits, echo=F}
+reactive({
+  gross.profits <- sales %>% filter( as_date(date) > date(input$range[1]) & as_date(date) < date(input$range[2])) %>% 
+    pull(gold) %>%
+    sum()
+  
+  gross.expenses <- expenses %>% filter( as_date(date) > date(input$range[1]) & as_date(date) < date(input$range[2])) %>% 
+    pull(gold) %>%
+    sum()
+  
+  net.profits <- gross.profits-gross.expenses
+  
+  duration <- as.integer(date(input$range[2])-date(input$range[1]))
+  daily.profit <- round(net.profits/duration, 2)
+  
+  paste("Gross profits: ", gross.profits, "   Expenses: ", gross.expenses, "   Net Profits: ", net.profits, "   Daily Profit: ", daily.profit, sep="")
+  
+
+})
+
+# PROBLEM: when I run the below commented code, I get an "object gross.profits not found" error, though the object is clearly defined above and printed with the paste() function. Not sure why.
+#renderText({
+#  paste("Gross profits: ", gross.profits, "   Expenses: ", gross.expenses, "   Net Profits: ", net.profits, "   Daily Profit: ", daily.profit, sep="")
+#})
+
+```
+
+
+Row {data-height=2800}
+-------------------------------------
+    
+### Sales
+    
+```{r sales.plot}
+renderPlot({
+  
+  sales %>% filter( itemName %in% input$pots ) %>% # filters sales data based on items selected in the checkbox input
+    filter( as_date(date) > date(input$range[1]) & as_date(date) < date(input$range[2])) %>% # filters sales data based on date range selected
+    ggplot(
+    aes(date, gold)) + geom_line(aes(date, gold, color=itemName)) # draws plot
+  
+  
+  }) 
+```
+   
+Row {.tabset .tabset-fade}
+-------------------------------------
+   
+### Potions
+
+```{r select.pots}
+checkboxGroupInput( inputId="pots", # checkbox group input for selecting which potions to display
+             label=NULL,
+             choices=sort(unique(sales$itemName)),
+             selected = sort(unique(sales$itemName))[-which(sort(unique(sales$itemName))=="Flask of the Titans")], # defines which potions selected by default. I unselect flask of the titans since it makes the y-axis of my graph very large relative to the sale prices of the rest of my potions
+             inline=T,
+             width='2400px'
+           )
+```   
+ 
+### Date Range
+    
+```{r date.selector}
+dateRangeInput(inputId = 'range', label = NULL, start = today() - months(1), end = today(), min = "2019-09-26", max = today(), format = "yyyy-mm-dd", startview = "month", weekstart = 0, language = "en", separator = " to ") # restricts date range, default to the past month
+```
+
+Column
+-----------------------------------------------------------------------
+**Sales**
+```{r sales.summary}
+
+renderTable({
+  sales %>% filter( as_date(date) > date(input$range[1]) & as_date(date) < date(input$range[2])) %>% filter( itemName %in% input$pots ) %>% # filters sales table by potions and date range selected
+    group_by( itemName ) %>% 
+    dplyr::summarize( "Quantity Sold"=n(), "Minimum Sale Price"=min(gold), "Maximum Sale Price"=max(gold), "Average Sale Price"=mean(gold), "Total Sales Value"=sum(gold) ) %>% # summary stats
+    adorn_totals("row", name = "Grand Total")
+})
+```
+
+**Expenses**
+
+```{r expenses.summary}
+
+renderTable({
+  expenses %>% filter( as_date(date) > date(input$range[1]) & as_date(date) < date(input$range[2])) %>% # filters purchases table by date range selected
+    group_by( itemName ) %>% 
+    dplyr::summarize( "Quantity Purchased"=n(), "Minimum Purchase Price"=min(gold), "Maximum Purchase Price"=max(gold), "Average Purchase Price"=mean(gold), "Total Purchased Value"=sum(gold) ) %>% 
+    adorn_totals("row", name = "Grand Total")
+})
+```
+
