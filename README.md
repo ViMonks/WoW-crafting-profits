@@ -14,3 +14,5 @@ Currently, the script is set up to calculate alchemy profits for WoW Classic, bu
 Known inaccuracies:
 1) If you purchase herbs to turn into potions for your own consumption, those herbs are calculated as purchases alongside the herbs you use for crafting/selling. This biases profits downwards.
 2) The script does not account for deposit costs on failed auctions. This biases profits upwards.
+
+Package dependencies: dplyr, tidyverse, pander, lubridate, janitor, Hmisc
