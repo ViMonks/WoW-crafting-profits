@@ -31,7 +31,7 @@ reagents <- Cs(i:9260,i:3164,i:3371,i:1288,i:2449,i:2447,i:6358,i:6370,i:6522,i:
 sales <- raw.sales %>% mutate(date = as_date(as_datetime(time))) %>% # converts unix timestamp to date
     filter( itemString %in% crafts ) %>% # filters alchemy crafts
     mutate(gold = round(price/10000, 2)) %>% # converts price (which is in copper by default) to a new gold variable
-    select( itemString, itemName, stackSize, quantity, date, gold) # selects the useful columns: itemString, itemName, stackSize, quantity, date, gold
+    select( itemString, itemName, stackSize, quantity, date, gold ) # selects the useful columns: itemString, itemName, stackSize, quantity, date, gold
     
 summary.sales <- sales %>%
     group_by( itemName ) %>% 
